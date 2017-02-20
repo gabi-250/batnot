@@ -20,7 +20,7 @@ charge_laptop(GtkWidget *button, gpointer window) {
 	GtkWidget *message = gtk_label_new ("That is not how you charge a laptop!");
 	gtk_container_set_border_width (GTK_CONTAINER (message_dialog), 20);
 	gtk_box_set_spacing (GTK_BOX (content_area), 20);
-	gtk_container_add (GTK_CONTAINER (content_area), GTK_LABEL (message));
+	gtk_box_pack_start (GTK_BOX (content_area), message, TRUE, TRUE, 20);
 	gtk_widget_show_all (message_dialog);
 	gint result = gtk_dialog_run (GTK_DIALOG (message_dialog));
 	if (result == GTK_RESPONSE_ACCEPT) {
@@ -34,23 +34,23 @@ charge_laptop(GtkWidget *button, gpointer window) {
 static void
 batnot_app_activate (GApplication* app)
 {
-	BatnotWindow *window;
+	GtkWindow *window;
 	GtkWidget *box;
 	GtkWidget *battery_level;
 	GtkWidget *charge_button;
 
-	window = batnot_window_new (BATNOT_APP (app));
+	window = GTK_WINDOW (batnot_window_new (BATNOT_APP (GTK_APPLICATION (app))));
 	box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 5);
 	battery_level = gtk_level_bar_new_for_interval (0.0, 100.0);
 	charge_button = gtk_button_new_with_label ("Charge laptop");
-	gtk_level_bar_set_value (battery_level, 50.0);
+	gtk_level_bar_set_value (GTK_LEVEL_BAR (battery_level), 50.0);
 	gtk_container_set_border_width (GTK_CONTAINER(window), 30);
-	gtk_container_add (GTK_CONTAINER (box), GTK_LEVEL_BAR (battery_level));
-	gtk_container_add (GTK_CONTAINER (box), GTK_BUTTON (charge_button));
-	gtk_container_add (GTK_CONTAINER (window), GTK_BOX (box));
+	gtk_container_add (GTK_CONTAINER (box), battery_level);
+	gtk_container_add (GTK_CONTAINER (box), charge_button);
+	gtk_container_add (GTK_CONTAINER (window), box);
 	g_signal_connect (charge_button, "clicked",
 			 G_CALLBACK (charge_laptop), GTK_WINDOW (window));
-	gtk_widget_show_all (window);
+	gtk_widget_show_all (GTK_WIDGET (window));
 	gtk_window_present (GTK_WINDOW (window));
 }
 
@@ -61,7 +61,7 @@ batnot_app_open (GApplication *app,
 	 	 const gchar   *hint)
 {
 	GList *windows;
-	BatnotApp *window;
+	BatnotWindow *window;
 	int i;
 
 	windows = gtk_application_get_windows (GTK_APPLICATION (app));

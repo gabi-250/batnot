@@ -24,11 +24,9 @@ struct _BatnotWindowClass
 
 GType batnot_window_get_type (void) G_GNUC_CONST;
 
-static void          batnot_window_init(BatnotWindow *window);
-static void          batnot_window_class_init(BatnotWindowClass *class);
-       BatnotApp* batnot_window_new (BatnotApp *app);
-       void          batnot_window_open (BatnotWindow *window,
-					 GFile        *file);
+BatnotWindow* batnot_window_new (BatnotApp *app);
+void          batnot_window_open (BatnotWindow *window,
+			          GFile        *file);
 
 G_END_DECLS
 

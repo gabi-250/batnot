@@ -22,16 +22,8 @@ struct _BatnotAppClass
 };
 
 
-GType batnot_app_get_type (void) G_GNUC_CONST;
-
-static void            batnot_app_init      (BatnotApp* app);
-static void            batnot_app_activate  (GApplication *app);
-static void            batnot_app_open      (GApplication *app,
-                                             GFile       **files,
-                                             gint           n_files,
-                                             const gchar   *hint);
-static void            batnot_app_class_init (BatnotAppClass *class);
-       BatnotApp*      batnot_app_new        (void);
+GType       batnot_app_get_type (void) G_GNUC_CONST;
+BatnotApp*  batnot_app_new      (void);
 
 G_END_DECLS
 
