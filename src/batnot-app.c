@@ -1,5 +1,6 @@
 #include "batnot-app.h"
 #include "batnot-window.h"
+#include "batnot-util.h"
 
 G_DEFINE_TYPE(BatnotApp, batnot_app, GTK_TYPE_APPLICATION);
 
@@ -38,12 +39,12 @@ batnot_app_activate (GApplication* app)
 	GtkWidget *box;
 	GtkWidget *battery_level;
 	GtkWidget *charge_button;
-
 	window = GTK_WINDOW (batnot_window_new (BATNOT_APP (GTK_APPLICATION (app))));
 	box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 5);
 	battery_level = gtk_level_bar_new_for_interval (0.0, 100.0);
 	charge_button = gtk_button_new_with_label ("Charge laptop");
-	gtk_level_bar_set_value (GTK_LEVEL_BAR (battery_level), 50.0);
+	gtk_level_bar_set_value (GTK_LEVEL_BAR (battery_level),
+				 (double) batnot_battery_level());
 	gtk_container_set_border_width (GTK_CONTAINER(window), 30);
 	gtk_container_add (GTK_CONTAINER (box), battery_level);
 	gtk_container_add (GTK_CONTAINER (box), charge_button);
