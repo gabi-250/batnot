@@ -17,7 +17,7 @@ batnot_acpi_path() {
 
 	output = (char *) malloc (BUFF_SIZE);
 	while (fgets(output, BUFF_SIZE - 1, fp) != NULL) {
-		printf("%s", output);
+		// do nothing
 	}
 	return output;
 }
