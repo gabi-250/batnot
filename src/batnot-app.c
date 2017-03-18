@@ -2,6 +2,8 @@
 #include "batnot-window.h"
 #include "batnot-util.h"
 
+#include <pthread.h>
+
 G_DEFINE_TYPE(BatnotApp, batnot_app, GTK_TYPE_APPLICATION);
 
 static void
@@ -33,12 +35,33 @@ charge_laptop(GtkWidget *button, gpointer window) {
 }
 
 static void
+update_battery_level(GtkWidget *battery_level_bar, gpointer *data) {
+	gdouble battery_level = (gdouble) batnot_battery_level();
+	gtk_level_bar_set_value(GTK_LEVEL_BAR (battery_level_bar),
+			        battery_level);
+}
+
+void*
+notify_level_bar(void *battery_level_bar) {
+	GtkWidget *level;
+
+	level = GTK_WIDGET(battery_level_bar);
+	while (TRUE) {
+		g_signal_emit_by_name(level, "offset-changed");
+		sleep(1);
+	}
+	pthread_exit(NULL);
+}
+
+static void
 batnot_app_activate (GApplication* app)
 {
 	GtkWindow *window;
 	GtkWidget *box;
 	GtkWidget *battery_level;
 	GtkWidget *charge_button;
+	pthread_t thread;
+	int rc;
 	window = GTK_WINDOW (batnot_window_new (BATNOT_APP (GTK_APPLICATION (app))));
 	box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 5);
 	battery_level = gtk_level_bar_new_for_interval (0.0, 100.0);
@@ -49,10 +72,19 @@ batnot_app_activate (GApplication* app)
 	gtk_container_add (GTK_CONTAINER (box), battery_level);
 	gtk_container_add (GTK_CONTAINER (box), charge_button);
 	gtk_container_add (GTK_CONTAINER (window), box);
+	rc = pthread_create(&thread, NULL, notify_level_bar,
+			    (void *)battery_level);
+	if (rc) {
+		printf("Error: could not start background thread.\n");
+		exit(1);
+	}
 	g_signal_connect (charge_button, "clicked",
-			 G_CALLBACK (charge_laptop), GTK_WINDOW (window));
+			  G_CALLBACK (charge_laptop), GTK_WINDOW (window));
+	g_signal_connect(battery_level, "offset-changed",
+			 G_CALLBACK (update_battery_level), NULL);
 	gtk_widget_show_all (GTK_WIDGET (window));
 	gtk_window_present (GTK_WINDOW (window));
+
 }
 
 static void
