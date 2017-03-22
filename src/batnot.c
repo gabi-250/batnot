@@ -1,6 +1,5 @@
 #include <gtk/gtk.h>
 #include "batnot-app.h"
-#include "batnot-window.h"
 
 int
 main (int argc, char **argv)
