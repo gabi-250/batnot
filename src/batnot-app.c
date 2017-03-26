@@ -1,7 +1,7 @@
+#include <pthread.h>
+#include <stdlib.h>
 #include "batnot-app.h"
 #include "batnot-util.h"
-
-#include <pthread.h>
 
 G_DEFINE_TYPE(BatnotApp, batnot_app, GTK_TYPE_APPLICATION);
 
@@ -13,32 +13,30 @@ batnot_app_init (BatnotApp* app)
 
 void*
 notify_low_battery(void *application) {
-	GApplication *app;
+	GApplication *app = NULL;
 	GNotification *battery_notif = NULL;
-	char notification[256];
-	GNotificationPriority priority;
-	int battery_level;
+	gchar *message = NULL;
+	GNotificationPriority priority = G_NOTIFICATION_PRIORITY_NORMAL;
+	int battery_level = 0;
 	app = (GApplication *) application;
 	while (TRUE) {
 		battery_level = batnot_battery_level();
 		if (battery_level < 20) {
-			g_stpcpy(notification,
-				 "[LOW BATTERY]: You should probably plug in your charger.");
-			priority = G_NOTIFICATION_PRIORITY_HIGH;
+			message = g_strdup_printf ("[LOW BATTERY]: %d%%", battery_level);
+			priority = G_NOTIFICATION_PRIORITY_LOW;
 
 		} else if (battery_level < 5) {
-			g_stpcpy(notification, "[CRITICALLY LOW BATTERY]: Hurry.");
+			message = g_strdup_printf ("[CRITICALLY LOW BATTERY]: %d%%", battery_level);
 			priority = G_NOTIFICATION_PRIORITY_URGENT;
 		} else {
 			pthread_exit(NULL);
 		}
-
-		battery_notif = g_notification_new (notification);
+		battery_notif = g_notification_new (message);
 		g_notification_set_priority (battery_notif, priority);
 		g_application_send_notification (app, "low-battery", battery_notif);
-		g_application_withdraw_notification (app, "low-battery");
-		//g_clear_object (battery_notif);
-		sleep(300);
+		g_object_unref (battery_notif);
+		g_free (message);
+		sleep (300);
 	}
 	pthread_exit (NULL);
 }
@@ -50,10 +48,10 @@ batnot_app_activate (GApplication* app)
 	pthread_t notif_thread;
 	int rc;
 
-	rc = pthread_create(&notif_thread, NULL, notify_low_battery, (void*) app);
+	rc = pthread_create (&notif_thread, NULL, notify_low_battery, (void*) app);
 	if (rc) {
-		printf("Error: could not start background thread.\n");
-		exit(1);
+		printf ("Error: could not start background thread.\n");
+		exit (1);
 	}
 	gtk_main();
 
