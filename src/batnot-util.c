@@ -46,6 +46,24 @@ batnot_acpi_output() {
 }
 
 int
+batnot_charging() {
+	char *acpi_output = NULL;
+	int charging = 0;
+	acpi_output = batnot_acpi_output ();
+	charging = strstr (acpi_output, "Charging") != NULL;
+	free (acpi_output);
+	return charging;
+}
+
+BatteryInfo*
+batnot_battery_info_new() {
+	BatteryInfo *info = malloc(sizeof(BatteryInfo));
+	info->charging = batnot_charging ();
+	info->battery_level = batnot_battery_level ();
+	return info;
+}
+
+int
 batnot_battery_level() {
 	char *acpi_output;
 	char *percentage;
