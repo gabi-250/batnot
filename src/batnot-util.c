@@ -2,88 +2,51 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <libupower-glib/upower.h>
 #include "batnot-util.h"
 
-char*
-batnot_acpi_path() {
-	char* output;
-	FILE *fp;
+BatteryInfo *
+batnot_device_info(gpointer device)
+{
+	BatteryInfo *info;
+	guint kind;
 
-	fp = popen ("/bin/which acpi", "r");
-	if (fp == NULL) {
-		printf("Could not run \'which\'\n");
-		exit(1);
+	info = malloc(sizeof(BatteryInfo));
+	g_object_get(G_OBJECT(device), "percentage", &info->percentage,
+		"state", &info->state,
+		"kind", &kind,
+		"time-to-empty", &info->time_to_empty,
+		"time-to-full", &info->time_to_full,
+		NULL);
+	if (kind == UP_DEVICE_KIND_BATTERY) {
+		return info;
 	}
-
-	output = (char *) malloc (BUFF_SIZE);
-	while (fgets(output, BUFF_SIZE - 1, fp) != NULL) {
-		// do nothing
-	}
-	return output;
+	free(info);
+	return NULL;
 }
 
-char*
-batnot_acpi_output() {
-	char* output;
-	FILE *fp;
-	char* command;
+BatteryInfo *
+batnot_battery_info_new()
+{
+	UpClient *client;
+	BatteryInfo *info;
+	GPtrArray *devices = NULL;
+	int i;
 
-	command = batnot_acpi_path();
-	*(command + strlen(command) -1) = '\0';
-	strcat (command, " -b");
-	fp = popen (command, "r");
-	if (fp == NULL) {
-		printf("Could not run \'acpi\'\n");
-		free (command);
-		exit(1);
+	client = up_client_new();
+	devices = up_client_get_devices(client);
+
+	for (i = 0; i < devices->len; ++i) {
+		info = batnot_device_info (g_ptr_array_index (devices, i));
+		if (info != NULL) {
+			g_ptr_array_free(devices, TRUE);
+			g_object_unref(client);
+			return info;
+		}
 	}
 
-	output = (char *) malloc (BUFF_SIZE);
-	while (fgets(output, BUFF_SIZE - 1, fp) != NULL) {
-
-	}
-	return output;
+	g_ptr_array_free(devices, TRUE);
+	g_object_unref(client);
+	return NULL;
 }
 
-int
-batnot_charging() {
-	char *acpi_output = NULL;
-	int charging = 0;
-	acpi_output = batnot_acpi_output ();
-	charging = strstr (acpi_output, "Charging") != NULL;
-	free (acpi_output);
-	return charging;
-}
-
-BatteryInfo*
-batnot_battery_info_new() {
-	BatteryInfo *info = malloc(sizeof(BatteryInfo));
-	info->charging = batnot_charging ();
-	info->battery_level = batnot_battery_level ();
-	return info;
-}
-
-int
-batnot_battery_level() {
-	char *acpi_output;
-	char *percentage;
-	int tens = 1;
-	int bat_level = 0;
-
-	acpi_output = batnot_acpi_output ();
-	percentage = strchr (acpi_output, '%');
-
-	if (percentage == NULL) {
-		free (acpi_output);
-		return -1;
-	}
-	--percentage;
-	while (percentage - acpi_output >= 0 && isdigit ((unsigned char) *percentage)) {
-		bat_level = bat_level + ((unsigned char) *percentage - '0') * tens;
-		--percentage;
-		tens *= 10;
-	}
-
-	free (acpi_output);
-	return bat_level;
-}

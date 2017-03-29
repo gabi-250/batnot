@@ -4,8 +4,10 @@
 #define BUFF_SIZE 128
 
 typedef struct BatteryInfo {
-	int charging;
-	int battery_level;
+	guint state;
+	gdouble percentage;
+	gint64 time_to_empty;
+	gint64 time_to_full;
 } BatteryInfo;
 
 char*        batnot_acpi_path(void);

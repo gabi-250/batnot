@@ -1,6 +1,7 @@
-#include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
+#include <libupower-glib/upower.h>
 #include "batnot-app.h"
 #include "batnot-util.h"
 
@@ -28,26 +29,40 @@ notify_low_battery(void *application) {
 	gchar *message = NULL;
 	BatteryInfo *info = NULL;
 	GNotificationPriority priority = G_NOTIFICATION_PRIORITY_NORMAL;
-	int battery_level = 0;
-	int charging = 0;
+	int battery_level;
+	int charging;
+
+	info = batnot_battery_info_new();
+	battery_level = (int)info->percentage;
+	charging = (info->state == UP_DEVICE_STATE_CHARGING);
 	app = (GApplication *) application;
 	while (TRUE) {
-		battery_level = batnot_battery_level();
-		charging = batnot_charging ();
-		if (charging && (info == NULL || !info->charging)) {
+		if (!charging && info->state == UP_DEVICE_STATE_CHARGING) {
 			message = g_strdup_printf ("[CHARGING]: %d%%", battery_level);
 			priority = G_NOTIFICATION_PRIORITY_LOW;
 			send_notification(app, message, priority);
+		} else if (info->state == UP_DEVICE_STATE_DISCHARGING) {
+			if (charging) {
+				message = g_strdup_printf ("[DISCHARGING]: %d%%",
+							   battery_level);
+				priority = G_NOTIFICATION_PRIORITY_LOW;
+				send_notification(app, message, priority);
+			} else {
+				if (battery_level < 20) {
+					message = g_strdup_printf ("[LOW BATTERY]: %d%%",
+								   battery_level);
+					priority = G_NOTIFICATION_PRIORITY_LOW;
+					send_notification(app, message, priority);
+				} else if (battery_level < 5) {
+					message = g_strdup_printf ("[CRITICALLY LOW BATTERY]: %d%%",
+								   battery_level);
+					priority = G_NOTIFICATION_PRIORITY_URGENT;
+					send_notification(app, message, priority);
+				}
+			}
 		}
-		if (!charging && battery_level < 20) {
-			message = g_strdup_printf ("[LOW BATTERY]: %d%%", battery_level);
-			priority = G_NOTIFICATION_PRIORITY_LOW;
-			send_notification(app, message, priority);
-		} else if (!charging && battery_level < 5) {
-			message = g_strdup_printf ("[CRITICALLY LOW BATTERY]: %d%%", battery_level);
-			priority = G_NOTIFICATION_PRIORITY_URGENT;
-			send_notification(app, message, priority);
-		}
+		battery_level = (int)info->percentage;
+		charging = (info->state == UP_DEVICE_STATE_CHARGING);
 		if (info != NULL) {
 			free(info);
 		}
