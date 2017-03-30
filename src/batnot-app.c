@@ -24,62 +24,82 @@ send_notification(GApplication *app, gchar *message, GNotificationPriority prior
 }
 
 void*
+notify_state_change(void *application) {
+	GApplication *app = NULL;
+	gchar *message = NULL;
+	BatteryInfo *info = NULL;
+	GNotificationPriority priority = G_NOTIFICATION_PRIORITY_NORMAL;
+	int was_charging;
+
+	info = batnot_battery_info_new();
+	was_charging = (info->state == UP_DEVICE_STATE_CHARGING);
+	app = (GApplication *) application;
+	while (TRUE) {
+		if (!was_charging && info->state == UP_DEVICE_STATE_CHARGING) {
+			message = g_strdup_printf ("[CHARGING]: %d%%",
+					           (int)info->percentage);
+			send_notification (app, message, priority);
+		} else if (was_charging && info->state == UP_DEVICE_STATE_DISCHARGING) {
+			message = g_strdup_printf ("[DISCHARGING]: %d%%",
+						   (int)info->percentage);
+			send_notification (app, message, priority);
+		}
+		was_charging = (info->state == UP_DEVICE_STATE_CHARGING);
+		if (info != NULL) {
+			free(info);
+		}
+		info = batnot_battery_info_new ();
+		sleep(0.2);
+	}
+	pthread_exit (NULL);
+}
+
+void*
 notify_low_battery(void *application) {
 	GApplication *app = NULL;
 	gchar *message = NULL;
 	BatteryInfo *info = NULL;
 	GNotificationPriority priority = G_NOTIFICATION_PRIORITY_NORMAL;
 	int battery_level;
-	int charging;
 
 	info = batnot_battery_info_new();
 	battery_level = (int)info->percentage;
-	charging = (info->state == UP_DEVICE_STATE_CHARGING);
 	app = (GApplication *) application;
 	while (TRUE) {
-		if (!charging && info->state == UP_DEVICE_STATE_CHARGING) {
-			message = g_strdup_printf ("[CHARGING]: %d%%", battery_level);
-			priority = G_NOTIFICATION_PRIORITY_LOW;
-			send_notification(app, message, priority);
-		} else if (info->state == UP_DEVICE_STATE_DISCHARGING) {
-			if (charging) {
-				message = g_strdup_printf ("[DISCHARGING]: %d%%",
+		if (info->state == UP_DEVICE_STATE_DISCHARGING) {
+			sleep(1);
+			if (battery_level < 20) {
+				message = g_strdup_printf ("[LOW BATTERY]: %d%%",
 							   battery_level);
 				priority = G_NOTIFICATION_PRIORITY_LOW;
-				send_notification(app, message, priority);
-			} else {
-				if (battery_level < 20) {
-					message = g_strdup_printf ("[LOW BATTERY]: %d%%",
-								   battery_level);
-					priority = G_NOTIFICATION_PRIORITY_LOW;
-					send_notification(app, message, priority);
-				} else if (battery_level < 5) {
-					message = g_strdup_printf ("[CRITICALLY LOW BATTERY]: %d%%",
-								   battery_level);
-					priority = G_NOTIFICATION_PRIORITY_URGENT;
-					send_notification(app, message, priority);
-				}
+				send_notification (app, message, priority);
+				sleep (300);
+			} else if (battery_level < 5) {
+				message = g_strdup_printf ("[CRITICALLY LOW BATTERY]: %d%%",
+							   battery_level);
+				priority = G_NOTIFICATION_PRIORITY_URGENT;
+				send_notification (app, message, priority);
+				sleep (60);
 			}
+		} else if (info->state == UP_DEVICE_STATE_CHARGING) {
+			sleep (300);
 		}
 		battery_level = (int)info->percentage;
-		charging = (info->state == UP_DEVICE_STATE_CHARGING);
-		if (info != NULL) {
-			free(info);
-		}
-		info = batnot_battery_info_new();
-		sleep (300);
+		free (info);
+		info = batnot_battery_info_new ();
 	}
 	pthread_exit (NULL);
 }
 
-
 static void
 batnot_app_activate (GApplication* app)
 {
-	pthread_t notif_thread;
+	pthread_t warning_thread;
+	pthread_t state_change_thread;
 	int rc;
 
-	rc = pthread_create (&notif_thread, NULL, notify_low_battery, (void*) app);
+	rc = pthread_create (&warning_thread, NULL, notify_low_battery, (void*) app);
+	rc = rc || pthread_create (&state_change_thread, NULL, notify_state_change, (void*) app);
 	if (rc) {
 		printf ("Error: could not start background thread.\n");
 		exit (1);
@@ -93,7 +113,6 @@ batnot_app_class_init (BatnotAppClass *class)
 {
 	G_APPLICATION_CLASS (class)->activate = batnot_app_activate;
 }
-
 
 BatnotApp*
 batnot_app_new(void)
