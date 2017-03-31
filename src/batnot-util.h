@@ -3,8 +3,14 @@
 
 #define BUFF_SIZE 128
 
-char* batnot_acpi_path(void);
-char* batnot_acpi_output(void);
-int   batnot_battery_level(void);
+typedef struct _BatteryInfo {
+	guint state;
+	gdouble percentage;
+	gint64 time_to_empty;
+	gint64 time_to_full;
+} BatteryInfo;
+
+BatteryInfo* batnot_device_info      (gpointer device);
+BatteryInfo* batnot_battery_info_new (void);
 
 #endif
