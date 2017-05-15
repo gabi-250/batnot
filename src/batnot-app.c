@@ -68,18 +68,21 @@ notify_low_battery(void *application) {
 	while (TRUE) {
 		if (info->state == UP_DEVICE_STATE_DISCHARGING) {
 			sleep(1);
-			if (battery_level < 20) {
-				message = g_strdup_printf ("[LOW BATTERY]: %d%%",
-							   battery_level);
-				priority = G_NOTIFICATION_PRIORITY_LOW;
-				send_notification (app, message, priority);
-				sleep (300);
-			} else if (battery_level < 5) {
+			if (battery_level < 5) {
 				message = g_strdup_printf ("[CRITICALLY LOW BATTERY]: %d%%",
 							   battery_level);
 				priority = G_NOTIFICATION_PRIORITY_URGENT;
 				send_notification (app, message, priority);
+				system("beep -f 600");
 				sleep (60);
+			}
+			else if (battery_level < 20) {
+				message = g_strdup_printf ("[LOW BATTERY]: %d%%",
+							   battery_level);
+				priority = G_NOTIFICATION_PRIORITY_LOW;
+				send_notification (app, message, priority);
+				system("beep -f 200");
+				sleep (300);
 			}
 		} else if (info->state == UP_DEVICE_STATE_CHARGING) {
 			sleep (300);
